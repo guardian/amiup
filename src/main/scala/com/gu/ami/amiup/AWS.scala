@@ -14,7 +14,8 @@ object AWS {
     asFuture(client.listStacksAsync)(request)
   }
 
-  def describeStacks(request: DescribeStacksRequest, client: AmazonCloudFormationAsyncClient): Future[DescribeStacksResult] = {
+  def describeStacks(client: AmazonCloudFormationAsyncClient): Future[DescribeStacksResult] = {
+    val request = new DescribeStacksRequest()
     asFuture(client.describeStacksAsync)(request)
   }
 

@@ -8,5 +8,6 @@ scalaVersion := "2.11.8"
 libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk-cloudformation" % "1.11.37",
   "com.github.scopt" %% "scopt" % "3.5.0",
+  "org.typelevel" %% "cats" % "0.7.2",
   "org.scalatest" %% "scalatest" % "3.0.0" % Test
 )

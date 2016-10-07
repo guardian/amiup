@@ -6,8 +6,20 @@ import scopt.OptionParser
 object AmiUp {
   def main(args: Array[String]): Unit = {
     argParser.parse(args, Arguments.empty()) match {
-      case parsedArgs @ Some(Arguments(newAmi, parameterName, sourceAmi, stacksOpt, profile, region)) =>
+      case parsedArgs @ Some(Arguments(newAmi, profile, parameterName, existingAmiOpt, stacksOpt, region)) =>
         println(parsedArgs)
+
+        val client = AWS.client(profile)
+        for {
+          // find stacks
+          matchingStacks <- UpdateCloudFormation.findStacks(existingAmiOpt.toLeft(stacksOpt.get), parameterName, client)
+          // validate stacks
+          stacks <- UpdateCloudFormation.validateStacks(parameterName, matchingStacks)
+          // update stacks
+        } yield {
+          stacks
+        }
+
       case None =>
         // parsing cmd line args failed, help message will be displayed
         System.exit(1)
@@ -50,6 +62,16 @@ object AmiUp {
       } action { (region, args) =>
         args.copy(region = Region.getRegion(Regions.fromName(region)))
       } text "AWS region name (defaults to eu-west-1)"
+    note(
+      """
+        |Update the AMI parameter of your cloudformation stacks.
+        |
+        |You will need to either provide an the ID of the AMI you wish to
+        |replace, or a list of cloudformation stack identifiers to update.
+        |In the first case, amiup will search all your stacks to find those
+        |that use the deprecated AMI, and in the latter case it will perform
+        |the update on the stack(s) you specify.
+      """.stripMargin)
     checkConfig { args =>
       (args.existingAmi.isEmpty, args.stackIds.isEmpty) match {
         case (true, true) =>
