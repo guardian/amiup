@@ -1,11 +1,11 @@
-package com.gu.ami.amiup
+package com.gu.ami.amiup.aws
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationAsyncClient
 import com.amazonaws.services.cloudformation.model._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 object UpdateCloudFormation {
@@ -30,19 +30,22 @@ object UpdateCloudFormation {
     }
   }
 
-  def validateStacks(parameterName: String, stacks: Seq[Stack]): Either[String, Seq[Stack]] = {
-    val stacksWithoutAmiParameter = stacks.filterNot { stack =>
-      stack.getParameters.asScala.exists(_.getParameterKey == parameterName)
+  def validateStacks(parameterName: String, stacks: Seq[Stack]): Either[String, List[Stack]] = {
+    if (stacks.isEmpty) Left("No stacks found")
+    else {
+      val stacksWithoutAmiParameter = stacks.filterNot { stack =>
+        stack.getParameters.asScala.exists(_.getParameterKey == parameterName)
+      }
+      if (stacksWithoutAmiParameter.isEmpty) Right(stacks.toList)
+      else Left(s"The following stacks do not have a `$parameterName` parameter: ${stacksWithoutAmiParameter.map(_.getStackName).mkString(",")}")
     }
-    if (stacksWithoutAmiParameter.isEmpty) Right(stacks)
-    else Left(s"The following stacks do not have a `$parameterName` parameter: ${stacksWithoutAmiParameter.map(_.getStackName).mkString(",")}")
   }
 
-  def updateStacks(stacks: List[Stack], newAmi: String, parameterName: String)(implicit client: AmazonCloudFormationAsyncClient): Future[Map[Stack, UpdateStackResult]] = {
-    Future.traverse(stacks)(updateStack(newAmi, parameterName)).map(_.toMap)
+  def updateStacks(stacks: List[Stack], newAmi: String, parameterName: String, client: AmazonCloudFormationAsyncClient)(implicit ec: ExecutionContext): Future[Map[Stack, UpdateStackResult]] = {
+    Future.traverse(stacks)(updateStack(newAmi, parameterName, client)).map(_.toMap)
   }
 
-  def updateStack(newAmi: String, parameterName: String)(stack: Stack)(implicit client: AmazonCloudFormationAsyncClient): Future[(Stack, UpdateStackResult)] = {
+  def updateStack(newAmi: String, parameterName: String, client: AmazonCloudFormationAsyncClient)(stack: Stack): Future[(Stack, UpdateStackResult)] = {
     val updatedParameters = stack.getParameters.asScala.map {
       case parameter if parameter.getParameterKey == parameterName =>
         new Parameter()
@@ -55,6 +58,12 @@ object UpdateCloudFormation {
       .withParameters(updatedParameters.asJava)
 
     AWS.updateStack(updateStackRequest, client).map(stack -> _)
+  }
+
+  def getStackEvents(stack: Stack)(implicit client: AmazonCloudFormationAsyncClient): Future[DescribeStackEventsResult] = {
+    val request = new DescribeStackEventsRequest()
+        .withStackName(stack.getStackName)
+    AWS.describeStackEvents(request, client)
   }
 
   private[amiup] def filterStack(sourceAmi: String, parameterName: String)(stack: Stack): Boolean = {

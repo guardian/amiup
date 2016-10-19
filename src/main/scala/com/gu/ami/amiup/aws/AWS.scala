@@ -1,4 +1,4 @@
-package com.gu.ami.amiup
+package com.gu.ami.amiup.aws
 
 import com.amazonaws.AmazonWebServiceRequest
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
@@ -23,6 +23,9 @@ object AWS {
     asFuture(client.updateStackAsync)(updateStackRequest)
   }
 
+  def describeStackEvents(describeStackEventsRequest: DescribeStackEventsRequest, client: AmazonCloudFormationAsyncClient): Future[DescribeStackEventsResult] = {
+    asFuture(client.describeStackEventsAsync)(describeStackEventsRequest)
+  }
 
   def client(profile: String): AmazonCloudFormationAsyncClient = {
     new AmazonCloudFormationAsyncClient(new ProfileCredentialsProvider(profile))

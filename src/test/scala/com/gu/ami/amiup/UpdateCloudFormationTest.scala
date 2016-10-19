@@ -5,7 +5,7 @@ import org.scalatest.{FreeSpec, Matchers}
 
 
 class UpdateCloudFormationTest extends FreeSpec with Matchers {
-  import UpdateCloudFormation._
+  import com.gu.ami.amiup.aws.UpdateCloudFormation._
 
   "updateStacks" - {
     val sourceAmi = "ami-abc123"

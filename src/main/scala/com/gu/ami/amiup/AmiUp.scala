@@ -1,23 +1,52 @@
 package com.gu.ami.amiup
 
+import cats.data.EitherT
+import cats.instances.future._
 import com.amazonaws.regions.{Region, Regions}
+import com.amazonaws.services.cloudformation.model.Stack
+import com.gu.ami.amiup.aws.{AWS, PollDescribeStackStatus, UpdateCloudFormation}
+import com.gu.ami.amiup.ui.UI
 import scopt.OptionParser
+import util.RichFuture._
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+
 
 object AmiUp {
   def main(args: Array[String]): Unit = {
     argParser.parse(args, Arguments.empty()) match {
       case parsedArgs @ Some(Arguments(newAmi, profile, parameterName, existingAmiOpt, stacksOpt, region)) =>
         println(parsedArgs)
-
         val client = AWS.client(profile)
-        for {
+
+        val result = for {
           // find stacks
-          matchingStacks <- UpdateCloudFormation.findStacks(existingAmiOpt.toLeft(stacksOpt.get), parameterName, client)
+          matchingStacks <- EitherT.right[Future, String, Seq[Stack]](
+            UpdateCloudFormation.findStacks(existingAmiOpt.toLeft(stacksOpt.get), parameterName, client)
+          )
           // validate stacks
-          stacks <- UpdateCloudFormation.validateStacks(parameterName, matchingStacks)
+          stacks <- EitherT.fromEither[Future](
+            UpdateCloudFormation.validateStacks(parameterName, matchingStacks)
+          )
+          // get confirmation
+          _ <- EitherT.fromEither[Future](
+            UI.confirmStacks(stacks)
+          )
           // update stacks
-        } yield {
-          stacks
+          _ <- EitherT.right(UpdateCloudFormation.updateStacks(stacks, newAmi, parameterName, client))
+          // watch the progress for all the stacks
+          finished <- PollDescribeStackStatus(stacks, 5.seconds, client).asFuture(UI.updateProgress)
+        } yield {}
+
+        result.value.awaitAsEither(5.minutes)(_.getMessage).joinRight match {
+          case Right(_) =>
+            UI.complete()
+            System.exit(0)
+          case Left(err) =>
+            println(err)
+            System.exit(1)
         }
 
       case None =>
