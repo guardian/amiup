@@ -11,6 +11,8 @@ libraryDependencies ++= Seq(
   "org.typelevel" %% "cats" % "0.7.2",
   "io.reactivex" %% "rxscala" % "0.26.3",
   "com.googlecode.lanterna" % "lanterna" % "3.0.0-beta3",
+  "ch.qos.logback" %  "logback-classic" % "1.1.7",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
   "org.scalatest" %% "scalatest" % "3.0.0" % Test
 )
 

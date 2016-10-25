@@ -1,9 +1,11 @@
 package com.gu.ami.amiup.util
 
+import cats.data.EitherT
 import rx.lang.scala.Observable
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.Duration
+import scala.util.Success
 
 
 /**
@@ -25,11 +27,11 @@ trait PollObserver[A, B] {
   def reduce(b: B, a: A): B
 
   /**
-    * Cease polling when the state reaches
+    * Cease polling when `complete` evaluates to true based on the current state.
     */
   def complete(b: B)(implicit ec: ExecutionContext): Boolean
 
-  def startPolling()(implicit ec: ExecutionContext) = {
+  def startPolling()(implicit ec: ExecutionContext): Observable[B] = {
     val delayedPoll = Observable.from {
       for {
         delay <- RichFuture.delay(delay)
@@ -43,5 +45,19 @@ trait PollObserver[A, B] {
         reduce(b, a)
       }
       .takeWhile(b => !complete(b))
+  }
+
+  def toFuture(onNext: B => Unit)(implicit ec: ExecutionContext): Future[Either[String, Unit]] = {
+    val p = Promise[Either[String, Unit]]
+    startPolling().subscribe(
+      onNext,
+      { err =>
+        p.complete(Success(Left(err.getMessage)))
+      },
+      { () =>
+        p.complete(Success(Right(())))
+      }
+    )
+    p.future
   }
 }

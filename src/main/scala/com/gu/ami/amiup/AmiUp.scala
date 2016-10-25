@@ -20,6 +20,7 @@ object AmiUp {
       case parsedArgs @ Some(Arguments(newAmi, profile, parameterName, existingAmiOpt, stacksOpt, region)) =>
         println(parsedArgs)
         val client = AWS.client(profile)
+        client.setRegion(region)
 
         val result = for {
           // find stacks
@@ -44,19 +45,19 @@ object AmiUp {
           case Right(_) =>
             UI.complete()
             System.exit(0)
-          case Left(err) =>
-            println(err)
+          case Left(errMessage) =>
+            UI.error(errMessage)
             System.exit(1)
         }
 
       case None =>
-        // parsing cmd line args failed, help message will be displayed
+        // parsing cmd line args failed, help message will have been displayed
         System.exit(1)
     }
   }
 
   val argParser = new OptionParser[Arguments]("amiup") {
-    arg[String]("<new ami id>")
+    opt[String]("new").required()
       .action { (amiId, args) =>
         args.copy(newAmi = amiId)
       } text "The ID of the new AMI - stacks will be updated to use this value"
@@ -64,14 +65,14 @@ object AmiUp {
       .action { (amiId, args) =>
         args.copy(existingAmi = Some(amiId))
       } text "The existing AMI ID - stacks with this value in their AMI parameter will be updated"
-    opt[Seq[String]]("stacks").optional()
-      .action { (stacks, args) =>
-        args.copy(stackIds = Some(stacks))
-      } text "You can optionally specify CloudFormation stacks by ID"
     opt[String]('p', "parameter").optional()
       .action { (parameterName, args) =>
         args.copy(parameterName = parameterName)
       } text "The CloudFormation parameter name that should be updated (defaults to AMI)"
+    opt[Seq[String]]("stacks").optional()
+      .action { (stacks, args) =>
+        args.copy(stackIds = Some(stacks))
+      } text "You can optionally specify CloudFormation stacks by ID"
     opt[String]("profile").required()
       .validate { profileName =>
         if (profileName.isEmpty) failure("You must provide an AWS profile for the cloudformation operation")

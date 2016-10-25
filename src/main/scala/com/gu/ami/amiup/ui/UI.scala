@@ -7,7 +7,12 @@ import com.gu.ami.amiup.StackProgress
 object UI {
   def complete() = println("Update complete".colour(Console.GREEN))
 
-  def confirmStacks(stacks: List[Stack]): Either[String, List[Stack]] = {
+  def error(message: String) = {
+    println("Aborting due to error".colour(Console.YELLOW))
+    println(message.colour(Console.RED))
+  }
+
+  def confirmStacks(stacks: Seq[Stack]): Either[String, Seq[Stack]] = {
     println(s"Found ${stacks.size} stacks".colour(Console.GREEN))
     stacks.foreach { stack =>
       println(stack.getStackName)
@@ -18,11 +23,11 @@ object UI {
       println("Updating stacks...")
       Right(stacks)
     } else {
-      Left("Aborting".colour(Console.YELLOW))
+      Left("Cancelling at user request".colour(Console.YELLOW))
     }
   }
 
-  def updateProgress(progress: List[StackProgress]): Unit = {
+  def updateProgress(progress: Seq[StackProgress]): Unit = {
     progress.foreach { stackProgress =>
       val colour = stackProgress match {
         case StackProgress(_, true, true) =>

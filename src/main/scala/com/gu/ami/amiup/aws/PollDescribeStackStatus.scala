@@ -5,25 +5,35 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormationAsyncClient
 import com.amazonaws.services.cloudformation.model.{Stack, StackStatus}
 import com.gu.ami.amiup.StackProgress
 import com.gu.ami.amiup.util.PollObserver
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Success
 
 
-case class PollDescribeStackStatus(stacks: List[Stack], delay: Duration, client: AmazonCloudFormationAsyncClient)
-  extends PollObserver[List[Stack], List[StackProgress]] {
+case class PollDescribeStackStatus(stacks: Seq[Stack], delay: Duration, client: AmazonCloudFormationAsyncClient)
+  extends PollObserver[Seq[Stack], Seq[StackProgress]] with LazyLogging {
 
   override val initial = stacks.map(StackProgress(_, started = false, finished = false))
 
-  override def poll()(implicit ec: ExecutionContext): Future[List[Stack]] = {
+  /**
+    * Describes stacks to fetch the current stack update statuses.
+    */
+  override def poll()(implicit ec: ExecutionContext): Future[Seq[Stack]] = {
     AWS.describeStacks(client).map { dsr =>
-      dsr.getStacks.asScala.toList.filter(stack => stacks.exists(_.getStackId == stack.getStackId))
+      logger.debug("Fetched describeStacksResult")
+      dsr.getStacks.asScala.toList.filter { stack =>
+        stacks.exists(_.getStackId == stack.getStackId)
+      }
     }
   }
 
-  override def reduce(prevProgress: List[StackProgress], stackStatuses: List[Stack]): List[StackProgress] = {
+  /**
+    * Updates progress based on current status.
+    */
+  override def reduce(prevProgress: Seq[StackProgress], stackStatuses: Seq[Stack]): Seq[StackProgress] = {
     for {
       stackProgress <- prevProgress
       currentStatus <- stackStatuses.find(_.getStackId == stackProgress.stack.getStackId)
@@ -34,7 +44,10 @@ case class PollDescribeStackStatus(stacks: List[Stack], delay: Duration, client:
     } yield StackProgress(currentStatus, started, finished)
   }
 
-  override def complete(progress: List[StackProgress])(implicit ec: ExecutionContext): Boolean = {
+  /**
+    * Stops polling when this is true.
+    */
+  override def complete(progress: Seq[StackProgress])(implicit ec: ExecutionContext): Boolean = {
     progress.forall { case StackProgress(_, started, finished) =>
       started && finished
     }
@@ -49,14 +62,16 @@ case class PollDescribeStackStatus(stacks: List[Stack], delay: Duration, client:
     }
   }
 
-  def asFuture(onNext: List[StackProgress] => Unit)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
+  def asFuture(onNext: Seq[StackProgress] => Unit)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
     val p = Promise[Either[String, Unit]]
     startPolling().subscribe(
       onNext,
       { err =>
+        logger.error("Error polling for updates", err)
         p.complete(Success(Left(err.getMessage)))
       },
       { () =>
+        logger.debug("Polling completed")
         p.complete(Success(Right(())))
       }
     )
