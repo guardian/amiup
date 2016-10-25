@@ -18,7 +18,6 @@ object AmiUp {
   def main(args: Array[String]): Unit = {
     argParser.parse(args, Arguments.empty()) match {
       case parsedArgs @ Some(Arguments(newAmi, profile, parameterName, existingAmiOpt, stacksOpt, region)) =>
-        println(parsedArgs)
         val client = AWS.client(profile)
         client.setRegion(region)
 
@@ -38,8 +37,8 @@ object AmiUp {
           // update stacks
           _ <- EitherT.right(UpdateCloudFormation.updateStacks(stacks, newAmi, parameterName, client))
           // watch the progress for all the stacks
-          finished <- PollDescribeStackStatus(stacks, 5.seconds, client).asFuture(UI.updateProgress)
-        } yield {}
+          finished <- PollDescribeStackStatus.pollUntilComplete(stacks, client)(UI.updateProgress)
+        } yield finished
 
         result.value.awaitAsEither(5.minutes)(_.getMessage).joinRight match {
           case Right(_) =>
