@@ -21,5 +21,6 @@ object Arguments {
 case class StackProgress(
   stack: Stack,
   started: Boolean,
-  finished: Boolean
+  finished: Boolean,
+  failed: Boolean
 )

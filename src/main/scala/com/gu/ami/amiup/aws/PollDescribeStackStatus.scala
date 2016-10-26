@@ -39,7 +39,7 @@ object PollDescribeStackStatus extends LazyLogging {
         } yield next
       }
     }
-    val initialProgress = stacks.map(StackProgress(_, started = false, finished = false))
+    val initialProgress = stacks.map(StackProgress(_, started = false, finished = false, failed = false))
     loop(initialProgress)
   }
 
@@ -65,20 +65,36 @@ object PollDescribeStackStatus extends LazyLogging {
       started = stackProgress.started || !isFinished(currentStatus)
       // we've seen it start and now we see it has finished
       finished = stackProgress.started && isFinished(currentStatus)
-    } yield StackProgress(currentStatus, started, finished)
+      // if we've seen it start a failure status means we've broken it
+      failed = stackProgress.started && isFailed(currentStatus)
+    } yield StackProgress(currentStatus, started, finished, failed)
   }
 
   private[aws] def complete(progress: Seq[StackProgress]): Boolean = {
-    progress.forall { case StackProgress(_, started, finished) =>
+    progress.forall { case StackProgress(_, started, finished, _) =>
       started && finished
     }
   }
 
   private[aws] def isFinished(stack: Stack): Boolean = {
     StackStatus.fromValue(stack.getStackStatus) match {
-      case StackStatus.UPDATE_COMPLETE => true
       case StackStatus.ROLLBACK_COMPLETE => true
+      case StackStatus.ROLLBACK_FAILED => true
+      case StackStatus.CREATE_COMPLETE => true
+      case StackStatus.DELETE_FAILED => true
+      case StackStatus.UPDATE_COMPLETE => true
       case StackStatus.UPDATE_ROLLBACK_FAILED => true
+      case StackStatus.UPDATE_ROLLBACK_COMPLETE => true
+      case _ => false
+    }
+  }
+
+  private[aws] def isFailed(stack: Stack): Boolean = {
+    StackStatus.fromValue(stack.getStackStatus) match {
+      case StackStatus.UPDATE_ROLLBACK_IN_PROGRESS => true
+      case StackStatus.UPDATE_ROLLBACK_FAILED => true
+      case StackStatus.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS => true
+      case StackStatus.UPDATE_ROLLBACK_COMPLETE => true
       case _ => false
     }
   }

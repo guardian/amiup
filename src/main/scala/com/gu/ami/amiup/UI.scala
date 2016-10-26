@@ -32,13 +32,16 @@ object UI extends LazyLogging {
 
   def displayProgress(progress: Seq[StackProgress]): Unit = {
     progress.foreach {
-      case StackProgress(stack, true, true) =>
+      case StackProgress(stack, _, _, true) =>
+        // stack update has failed
+        println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.RED))
+      case StackProgress(stack, true, true, _) =>
         println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.GREEN))
-      case StackProgress(stack, true, false) =>
+      case StackProgress(stack, true, false, _) =>
         println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.CYAN))
-      case StackProgress(stack, false, false) =>
+      case StackProgress(stack, false, false, _) =>
         println(s"${stack.getStackName}: Starting...".colour(Console.BLUE))
-      case StackProgress(stack, false, true) =>
+      case StackProgress(stack, false, true, _) =>
         logger.error(s"stack ${stack.getStackName} in invalid state, finished but not started")
         println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.CYAN))
     }
