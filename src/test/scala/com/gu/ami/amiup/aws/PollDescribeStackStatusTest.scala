@@ -35,15 +35,15 @@ class PollDescribeStackStatusTest extends FreeSpec with Matchers {
 
   "complete" - {
     "is true when all stacks are started and finished" in {
-      val finished1 = StackProgress(new Stack(), true, true)
-      val finished2 = StackProgress(new Stack(), true, true)
+      val finished1 = StackProgress(new Stack(), started = true, finished = true)
+      val finished2 = StackProgress(new Stack(), started = true, finished = true)
 
       complete(Seq(finished1, finished2)) shouldEqual true
     }
 
     "is false if there is a stack that is nto finished" in {
-      val finished = StackProgress(new Stack(), true, true)
-      val unfinished = StackProgress(new Stack(), true, false)
+      val finished = StackProgress(new Stack(), started = true, finished = true)
+      val unfinished = StackProgress(new Stack(), started = true, finished = false)
 
       complete(Seq(finished, unfinished)) shouldEqual false
     }

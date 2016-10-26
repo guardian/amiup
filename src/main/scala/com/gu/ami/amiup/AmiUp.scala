@@ -5,12 +5,11 @@ import cats.instances.future._
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.cloudformation.model.Stack
 import com.gu.ami.amiup.aws.{AWS, PollDescribeStackStatus, UpdateCloudFormation}
-import com.gu.ami.amiup.ui.UI
+import com.gu.ami.amiup.util.RichFuture._
 import scopt.OptionParser
-import util.RichFuture._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
@@ -34,12 +33,13 @@ object AmiUp {
           _ <- EitherT.fromEither[Future](
             UI.confirmStacks(stacks)
           )
-          // update stacks
+          // make update stacks calls
           _ <- EitherT.right(UpdateCloudFormation.updateStacks(stacks, newAmi, parameterName, client))
           // watch the progress for all the stacks
-          finished <- PollDescribeStackStatus.pollUntilComplete(stacks, client)(UI.updateProgress)
+          finished <- PollDescribeStackStatus.pollUntilComplete(stacks, client)(UI.displayProgress)
         } yield finished
 
+        // give it 5 minutes to complete (CF is sometimes slow)
         result.value.awaitAsEither(5.minutes)(_.getMessage).joinRight match {
           case Right(_) =>
             UI.complete()

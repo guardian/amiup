@@ -14,17 +14,22 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object PollDescribeStackStatus extends LazyLogging {
+  val interval = 2.seconds
+
   def pollUntilComplete(stacks: Seq[Stack], client: AmazonCloudFormationAsyncClient)(onNext: Seq[StackProgress] => Unit)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
     def loop(progress: Seq[StackProgress]): EitherT[Future, String, Unit] = {
       onNext(progress)
+
       if (complete(progress)) {
         // stop looping when we're finished
+        logger.info("Polling complete, stacks are updated")
         EitherT.pure[Future, String, Unit](())
       } else {
         // poll again, after a delay
+        logger.debug("Polling not yet complete, will repeat lookup after delay")
         for {
-        // delay next execution
-          _ <- EitherT.right(RichFuture.delay(2.seconds))
+          // delay next execution
+          _ <- EitherT.right(RichFuture.delay(interval))
           // call describe stacks to get current status
           stackStatuses <- getStackStatuses(stacks, client)
           // update progress

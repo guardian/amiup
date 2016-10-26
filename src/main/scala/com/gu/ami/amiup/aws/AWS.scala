@@ -11,10 +11,6 @@ import scala.concurrent.{Future, Promise}
 
 
 object AWS extends LazyLogging {
-  def listStacks(request: ListStacksRequest, client: AmazonCloudFormationAsyncClient): Future[ListStacksResult] = {
-    asFuture(client.listStacksAsync)(request)
-  }
-
   def describeStacks(client: AmazonCloudFormationAsyncClient): Future[DescribeStacksResult] = {
     val request = new DescribeStacksRequest()
     asFuture(client.describeStacksAsync)(request)
@@ -22,10 +18,6 @@ object AWS extends LazyLogging {
 
   def updateStack(updateStackRequest: UpdateStackRequest, client: AmazonCloudFormationAsyncClient): Future[UpdateStackResult] = {
     asFuture(client.updateStackAsync)(updateStackRequest)
-  }
-
-  def describeStackEvents(describeStackEventsRequest: DescribeStackEventsRequest, client: AmazonCloudFormationAsyncClient): Future[DescribeStackEventsResult] = {
-    asFuture(client.describeStackEventsAsync)(describeStackEventsRequest)
   }
 
   def client(profile: String): AmazonCloudFormationAsyncClient = {

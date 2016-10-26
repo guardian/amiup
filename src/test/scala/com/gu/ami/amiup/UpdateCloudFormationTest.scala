@@ -13,7 +13,7 @@ class UpdateCloudFormationTest extends FreeSpec with Matchers {
 
     "filters out a stack with an invalid status" in {
       val stack = new Stack()
-          .withStackStatus(StackStatus.CREATE_FAILED)
+        .withStackStatus(StackStatus.CREATE_FAILED)
       filterStack(sourceAmi, parameterName)(stack) shouldEqual false
     }
 
@@ -28,7 +28,9 @@ class UpdateCloudFormationTest extends FreeSpec with Matchers {
       }
 
       "filters out a stack without a matching parameter name" in {
-        val parameter = new Parameter().withParameterKey("foo").withParameterValue("bar")
+        val parameter = new Parameter()
+          .withParameterKey("foo")
+          .withParameterValue("bar")
         val stack = new Stack()
           .withStackStatus(status)
           .withParameters(parameter)
@@ -36,7 +38,9 @@ class UpdateCloudFormationTest extends FreeSpec with Matchers {
       }
 
       "filters out a stack that has a matching parameter name with a different value" in {
-        val parameter = new Parameter().withParameterKey(parameterName).withParameterValue("different-value")
+        val parameter = new Parameter()
+          .withParameterKey(parameterName)
+          .withParameterValue("different-value")
         val stack = new Stack()
           .withStackStatus(status)
           .withParameters(parameter)
@@ -44,7 +48,9 @@ class UpdateCloudFormationTest extends FreeSpec with Matchers {
       }
 
       "includes a stack with a matching parameter name/value" in {
-        val matchingParameter = new Parameter().withParameterKey(parameterName).withParameterValue(sourceAmi)
+        val matchingParameter = new Parameter()
+          .withParameterKey(parameterName)
+          .withParameterValue(sourceAmi)
         val stack = new Stack()
           .withStackStatus(status)
           .withParameters(matchingParameter)

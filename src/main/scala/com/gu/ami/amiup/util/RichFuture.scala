@@ -8,15 +8,6 @@ import scala.util.{Failure, Success}
 
 
 object RichFuture {
-  def delay[A](a: A, delay: Duration): Future[A] = {
-    val p = Promise[A]
-    val t = new Timer()
-    t.schedule(new TimerTask {
-      override def run(): Unit = p.complete(Success(a))
-    }, delay.toMillis)
-    p.future
-  }
-
   def delay(delay: Duration): Future[Unit] = {
     val p = Promise[Unit]
     val t = new Timer()

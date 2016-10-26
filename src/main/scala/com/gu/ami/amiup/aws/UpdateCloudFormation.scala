@@ -35,14 +35,13 @@ object UpdateCloudFormation extends LazyLogging {
   }
 
   def validateStacks(parameterName: String, stacks: Seq[Stack]): Either[String, Seq[Stack]] = {
-    if (stacks.isEmpty) Left("No stacks found")
-    else {
-      val stacksWithoutAmiParameter = stacks.filterNot { stack =>
-        stack.getParameters.asScala.exists(_.getParameterKey == parameterName)
-      }
-      if (stacksWithoutAmiParameter.isEmpty) Right(stacks)
-      else Left(s"The following stacks do not have a `$parameterName` parameter: ${stacksWithoutAmiParameter.map(_.getStackName).mkString(",")}")
+    val stacksWithoutAmiParameter = stacks.filterNot { stack =>
+      stack.getParameters.asScala.exists(_.getParameterKey == parameterName)
     }
+
+    if (stacks.isEmpty) Left("No stacks found")
+    else if (stacksWithoutAmiParameter.isEmpty) Right(stacks)
+    else Left(s"The following stacks do not have a `$parameterName` parameter: ${stacksWithoutAmiParameter.map(_.getStackName).mkString(",")}")
   }
 
   def updateStacks(stacks: Seq[Stack], newAmi: String, parameterName: String, client: AmazonCloudFormationAsyncClient)(implicit ec: ExecutionContext): Future[Map[Stack, UpdateStackResult]] = {
@@ -66,18 +65,13 @@ object UpdateCloudFormation extends LazyLogging {
     AWS.updateStack(updateStackRequest, client).map(stack -> _)
   }
 
-  def getStackEvents(stack: Stack)(implicit client: AmazonCloudFormationAsyncClient): Future[DescribeStackEventsResult] = {
-    val request = new DescribeStackEventsRequest().withStackName(stack.getStackName)
-    AWS.describeStackEvents(request, client)
-  }
-
   private[amiup] def filterStack(sourceAmi: String, parameterName: String)(stack: Stack): Boolean = {
-    val included = allowedStatuses.contains(StackStatus.fromValue(stack.getStackStatus)) && {
+    val isIncluded = allowedStatuses.contains(StackStatus.fromValue(stack.getStackStatus)) && {
       stack.getParameters.asScala
         .find(_.getParameterKey == parameterName)
         .exists(_.getParameterValue == sourceAmi)
     }
-    logger.debug(s"Stack ${stack.getStackName} included: $included")
-    included
+    logger.debug(s"Stack ${stack.getStackName} ${if(isIncluded) "included" else "excluded"}")
+    isIncluded
   }
 }
