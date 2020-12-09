@@ -1,10 +1,11 @@
 package com.gu.ami.amiup
 
 import com.amazonaws.services.cloudformation.model.{Parameter, Stack, StackStatus}
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 
-class UpdateCloudFormationTest extends FreeSpec with Matchers {
+class UpdateCloudFormationTest extends AnyFreeSpec with Matchers {
   import com.gu.ami.amiup.aws.UpdateCloudFormation._
 
   "updateStacks" - {

@@ -8,7 +8,7 @@ import com.gu.ami.amiup.StackProgress
 import com.gu.ami.amiup.util.RichFuture
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,7 +23,7 @@ object PollDescribeStackStatus extends LazyLogging {
       if (complete(progress)) {
         // stop looping when we're finished
         logger.info("Polling complete, stacks are updated")
-        EitherT.pure[Future, String, Unit](())
+        EitherT.pure(())
       } else {
         // poll again, after a delay
         logger.debug("Polling not yet complete, will repeat lookup after delay")
