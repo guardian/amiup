@@ -4,9 +4,9 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormationAsyncClient
 import com.amazonaws.services.cloudformation.model._
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 
 object UpdateCloudFormation extends LazyLogging {
@@ -19,7 +19,7 @@ object UpdateCloudFormation extends LazyLogging {
     for {
       describeStacksResult <- AWS.describeStacks(client)
     } yield {
-      val allStacks = describeStacksResult.getStacks.asScala
+      val allStacks = describeStacksResult.getStacks.asScala.toSeq
       logger.info(s"Found ${allStacks.size} stacks")
       logger.debug(s"stacks: ${allStacks.map(_.getStackName).mkString(", ")}")
       val matchingStacks = existingAmiOrStacks match {
@@ -44,7 +44,7 @@ object UpdateCloudFormation extends LazyLogging {
     else Left(s"The following stacks do not have a `$parameterName` parameter: ${stacksWithoutAmiParameter.map(_.getStackName).mkString(",")}")
   }
 
-  def updateStacks(stacks: Seq[Stack], newAmi: String, parameterName: String, client: AmazonCloudFormationAsyncClient)(implicit ec: ExecutionContext): Future[Map[Stack, UpdateStackResult]] = {
+  def updateStacks(stacks: Seq[Stack], newAmi: String, parameterName: String, client: AmazonCloudFormationAsyncClient): Future[Map[Stack, UpdateStackResult]] = {
     Future.traverse(stacks)(updateStack(newAmi, parameterName, client)).map(_.toMap)
   }
 

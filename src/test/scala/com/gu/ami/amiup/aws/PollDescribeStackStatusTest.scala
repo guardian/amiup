@@ -2,9 +2,10 @@ package com.gu.ami.amiup.aws
 
 import com.amazonaws.services.cloudformation.model.{Stack, StackStatus}
 import com.gu.ami.amiup.StackProgress
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class PollDescribeStackStatusTest extends FreeSpec with Matchers {
+class PollDescribeStackStatusTest extends AnyFreeSpec with Matchers {
   import PollDescribeStackStatus._
 
   "updateProgress" - {

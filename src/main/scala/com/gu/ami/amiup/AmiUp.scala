@@ -3,7 +3,6 @@ package com.gu.ami.amiup
 import cats.data.EitherT
 import cats.instances.future._
 import com.amazonaws.regions.{Region, Regions}
-import com.amazonaws.services.cloudformation.model.Stack
 import com.gu.ami.amiup.aws.{AWS, PollDescribeStackStatus, UpdateCloudFormation}
 import com.gu.ami.amiup.util.RichFuture._
 import scopt.OptionParser
@@ -22,7 +21,7 @@ object AmiUp {
 
         val result = for {
           // find stacks
-          matchingStacks <- EitherT.right[Future, String, Seq[Stack]](
+          matchingStacks <- EitherT.right(
             UpdateCloudFormation.findStacks(existingAmiOpt.toLeft(stacksOpt.get), parameterName, client)
           )
           // validate stacks
