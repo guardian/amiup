@@ -21,8 +21,8 @@ is a jar that can be executed directly.
 
 Using the credentials you provide, `amiup` will first find all the
 matching CloudFormation stacks. These will be stacks with an `AMI`
-parameter (use the `--parameter name` argument to choose a different
-paramter name) that contains the `--existing` ami.
+parameter (use the `--parameter` argument to choose a different
+parameter name) that contains the `--existing` ami.
 
 For each stack it finds, it will perform a CloudFormation update that
 changes the AMI parameter's value to the ami given as the `--new`
