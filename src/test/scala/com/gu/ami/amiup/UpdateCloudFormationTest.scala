@@ -1,8 +1,8 @@
 package com.gu.ami.amiup
 
-import com.amazonaws.services.cloudformation.model.{Parameter, Stack, StackStatus}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import software.amazon.awssdk.services.cloudformation.model.{Parameter, Stack, StackStatus}
 
 
 class UpdateCloudFormationTest extends AnyFreeSpec with Matchers {
@@ -13,8 +13,7 @@ class UpdateCloudFormationTest extends AnyFreeSpec with Matchers {
     val parameterName = "AMI"
 
     "filters out a stack with an invalid status" in {
-      val stack = new Stack()
-        .withStackStatus(StackStatus.CREATE_FAILED)
+      val stack = Stack.builder().stackStatus(StackStatus.CREATE_FAILED).build()
       filterStack(sourceAmi, parameterName)(stack) shouldEqual false
     }
 
@@ -22,39 +21,34 @@ class UpdateCloudFormationTest extends AnyFreeSpec with Matchers {
       val status = StackStatus.CREATE_COMPLETE
 
       "filters out a stack with no parameters" in {
-        val stack = new Stack()
-          .withStackStatus(status)
-          .withParameters()
+        val stack = Stack.builder().stackStatus(status).build()
         filterStack(sourceAmi, parameterName)(stack) shouldEqual false
       }
 
       "filters out a stack without a matching parameter name" in {
-        val parameter = new Parameter()
-          .withParameterKey("foo")
-          .withParameterValue("bar")
-        val stack = new Stack()
-          .withStackStatus(status)
-          .withParameters(parameter)
+        val parameter = Parameter.builder()
+          .parameterKey("foo")
+          .parameterValue("bar")
+          .build()
+        val stack = Stack.builder().stackStatus(status).parameters(parameter).build()
         filterStack(sourceAmi, parameterName)(stack) shouldEqual false
       }
 
       "filters out a stack that has a matching parameter name with a different value" in {
-        val parameter = new Parameter()
-          .withParameterKey(parameterName)
-          .withParameterValue("different-value")
-        val stack = new Stack()
-          .withStackStatus(status)
-          .withParameters(parameter)
+        val parameter = Parameter.builder()
+          .parameterKey(parameterName)
+          .parameterValue("different-value")
+          .build()
+        val stack = Stack.builder().stackStatus(status).parameters(parameter).build()
         filterStack(sourceAmi, parameterName)(stack) shouldEqual false
       }
 
       "includes a stack with a matching parameter name/value" in {
-        val matchingParameter = new Parameter()
-          .withParameterKey(parameterName)
-          .withParameterValue(sourceAmi)
-        val stack = new Stack()
-          .withStackStatus(status)
-          .withParameters(matchingParameter)
+        val matchingParameter = Parameter.builder()
+          .parameterKey(parameterName)
+          .parameterValue(sourceAmi)
+          .build()
+        val stack = Stack.builder().stackStatus(status).parameters(matchingParameter).build()
         filterStack(sourceAmi, parameterName)(stack) shouldEqual true
       }
     }

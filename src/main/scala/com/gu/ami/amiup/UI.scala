@@ -1,6 +1,6 @@
 package com.gu.ami.amiup
 
-import com.amazonaws.services.cloudformation.model.Stack
+import software.amazon.awssdk.services.cloudformation.model.Stack
 import com.typesafe.scalalogging.LazyLogging
 
 
@@ -18,7 +18,7 @@ object UI extends LazyLogging {
   def confirmStacks(stacks: Seq[Stack]): Either[String, Seq[Stack]] = {
     println(s"Found ${stacks.size} stacks".colour(Console.GREEN))
     stacks.foreach { stack =>
-      println(stack.getStackName)
+      println(stack.stackName)
     }
     print("Update these stacks? [y/N]")
     val confirmation = scala.io.StdIn.readLine()
@@ -34,16 +34,16 @@ object UI extends LazyLogging {
     progress.foreach {
       case StackProgress(stack, _, _, true) =>
         // stack update has failed
-        println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.RED))
+        println(s"${stack.stackName}: ${stack.stackStatus}".colour(Console.RED))
       case StackProgress(stack, true, true, _) =>
-        println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.GREEN))
+        println(s"${stack.stackName}: ${stack.stackStatus}".colour(Console.GREEN))
       case StackProgress(stack, true, false, _) =>
-        println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.CYAN))
+        println(s"${stack.stackName}: ${stack.stackStatus}".colour(Console.CYAN))
       case StackProgress(stack, false, false, _) =>
-        println(s"${stack.getStackName}: Starting...".colour(Console.BLUE))
+        println(s"${stack.stackName}: Starting...".colour(Console.BLUE))
       case StackProgress(stack, false, true, _) =>
-        logger.error(s"stack ${stack.getStackName} in invalid state, finished but not started")
-        println(s"${stack.getStackName}: ${stack.getStackStatus}".colour(Console.CYAN))
+        logger.error(s"stack ${stack.stackName} in invalid state, finished but not started")
+        println(s"${stack.stackName}: ${stack.stackStatus}".colour(Console.CYAN))
     }
     println("-----------------------".colour(Console.RESET))
   }

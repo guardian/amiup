@@ -1,7 +1,7 @@
 package com.gu.ami.amiup
 
-import com.amazonaws.regions.{Region, Regions}
-import com.amazonaws.services.cloudformation.model.Stack
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.cloudformation.model.Stack
 
 
 case class AMI(amiId: String)
@@ -12,7 +12,7 @@ case class Arguments(
   parameterName: String = "AMI",
   existingAmi: Option[String] = None,
   stackIds: Option[Seq[String]] = None,
-  region: Region = Region.getRegion(Regions.EU_WEST_1)
+  region: Region = Region.EU_WEST_1
 )
 object Arguments {
   def empty() = Arguments("", "")

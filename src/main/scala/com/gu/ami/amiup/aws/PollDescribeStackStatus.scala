@@ -2,21 +2,21 @@ package com.gu.ami.amiup.aws
 
 import cats.data.EitherT
 import cats.instances.future._
-import com.amazonaws.services.cloudformation.AmazonCloudFormationAsyncClient
-import com.amazonaws.services.cloudformation.model.{Stack, StackStatus}
 import com.gu.ami.amiup.StackProgress
 import com.gu.ami.amiup.util.RichFuture
 import com.typesafe.scalalogging.LazyLogging
+import software.amazon.awssdk.services.cloudformation.CloudFormationAsyncClient
+import software.amazon.awssdk.services.cloudformation.model.{Stack, StackStatus}
 
-import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 
 object PollDescribeStackStatus extends LazyLogging {
   val interval = 2.seconds
 
-  def pollUntilComplete(stacks: Seq[Stack], client: AmazonCloudFormationAsyncClient)(onNext: Seq[StackProgress] => Unit)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
+  def pollUntilComplete(stacks: Seq[Stack], client: CloudFormationAsyncClient)(onNext: Seq[StackProgress] => Unit)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
     def loop(progress: Seq[StackProgress]): EitherT[Future, String, Unit] = {
       onNext(progress)
 
@@ -43,12 +43,12 @@ object PollDescribeStackStatus extends LazyLogging {
     loop(initialProgress)
   }
 
-  private def getStackStatuses(stacks: Seq[Stack], client: AmazonCloudFormationAsyncClient)(implicit ec: ExecutionContext): EitherT[Future, String, Seq[Stack]] = {
+  private def getStackStatuses(stacks: Seq[Stack], client: CloudFormationAsyncClient)(implicit ec: ExecutionContext): EitherT[Future, String, Seq[Stack]] = {
     EitherT {
       AWS.describeStacks(client).map { dsr =>
-        logger.debug("Fetched describeStacksResult")
-        Right(dsr.getStacks.asScala.toList.filter { stack =>
-          stacks.exists(_.getStackId == stack.getStackId)
+        logger.debug("Fetched describeStacksResponse")
+        Right(dsr.stacks.asScala.toList.filter { stack =>
+          stacks.exists(_.stackId == stack.stackId)
         })
       }.recover { case err =>
         logger.error("Error describing stacks", err)
@@ -60,7 +60,7 @@ object PollDescribeStackStatus extends LazyLogging {
   private[aws] def updateProgress(prevProgress: Seq[StackProgress], stackStatuses: Seq[Stack]): Seq[StackProgress] = {
     for {
       stackProgress <- prevProgress
-      currentStatus <- stackStatuses.find(_.getStackId == stackProgress.stack.getStackId)
+      currentStatus <- stackStatuses.find(_.stackId == stackProgress.stack.stackId)
       // either we already saw it start or we can see it running
       started = stackProgress.started || !isFinished(currentStatus)
       // we've seen it start and now we see it has finished
@@ -77,7 +77,7 @@ object PollDescribeStackStatus extends LazyLogging {
   }
 
   private[aws] def isFinished(stack: Stack): Boolean = {
-    StackStatus.fromValue(stack.getStackStatus) match {
+    stack.stackStatus match {
       case StackStatus.ROLLBACK_COMPLETE => true
       case StackStatus.ROLLBACK_FAILED => true
       case StackStatus.CREATE_COMPLETE => true
@@ -90,7 +90,7 @@ object PollDescribeStackStatus extends LazyLogging {
   }
 
   private[aws] def isFailed(stack: Stack): Boolean = {
-    StackStatus.fromValue(stack.getStackStatus) match {
+    stack.stackStatus match {
       case StackStatus.UPDATE_ROLLBACK_IN_PROGRESS => true
       case StackStatus.UPDATE_ROLLBACK_FAILED => true
       case StackStatus.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS => true
