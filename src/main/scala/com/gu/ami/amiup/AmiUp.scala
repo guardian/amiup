@@ -2,10 +2,10 @@ package com.gu.ami.amiup
 
 import cats.data.EitherT
 import cats.instances.future._
-import com.amazonaws.regions.{Region, Regions}
 import com.gu.ami.amiup.aws.{AWS, PollDescribeStackStatus, UpdateCloudFormation}
 import com.gu.ami.amiup.util.RichFuture._
 import scopt.OptionParser
+import software.amazon.awssdk.regions.Region
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -16,8 +16,7 @@ object AmiUp {
   def main(args: Array[String]): Unit = {
     argParser.parse(args, Arguments.empty()) match {
       case parsedArgs @ Some(Arguments(newAmi, profile, parameterName, existingAmiOpt, stacksOpt, region)) =>
-        val client = AWS.client(profile)
-        client.setRegion(region)
+        val client = AWS.client(profile, region)
 
         val result = for {
           // find stacks
@@ -81,14 +80,16 @@ object AmiUp {
     opt[String]("region").optional()
       .validate { region =>
         try {
-          Region.getRegion(Regions.fromName(region))
+          // TODO: either remove or fix the region validation as this no longer throws here,
+          //  an invalid region now causes a UnknownHostException when the API calls are made
+          Region.of(region)
           success
         } catch {
           case e: IllegalArgumentException =>
             failure(s"Invalid AWS region name, $region")
         }
       } action { (region, args) =>
-        args.copy(region = Region.getRegion(Regions.fromName(region)))
+        args.copy(region = Region.of(region))
       } text "AWS region name (defaults to eu-west-1)"
     note(
       """

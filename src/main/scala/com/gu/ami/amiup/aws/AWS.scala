@@ -1,43 +1,29 @@
 package com.gu.ami.amiup.aws
 
-import com.amazonaws.AmazonWebServiceRequest
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.handlers.AsyncHandler
-import com.amazonaws.services.cloudformation.AmazonCloudFormationAsyncClient
-import com.amazonaws.services.cloudformation.model._
 import com.typesafe.scalalogging.LazyLogging
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.cloudformation.CloudFormationAsyncClient
+import software.amazon.awssdk.services.cloudformation.model.{DescribeStacksRequest, DescribeStacksResponse, UpdateStackRequest, UpdateStackResponse}
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Future
+import scala.jdk.FutureConverters._
 
 
 object AWS extends LazyLogging {
-  def describeStacks(client: AmazonCloudFormationAsyncClient): Future[DescribeStacksResult] = {
-    val request = new DescribeStacksRequest()
-    asFuture(client.describeStacksAsync)(request)
+  def describeStacks(client: CloudFormationAsyncClient): Future[DescribeStacksResponse] = {
+    val request = DescribeStacksRequest.builder().build()
+    client.describeStacks(request).asScala
   }
 
-  def updateStack(updateStackRequest: UpdateStackRequest, client: AmazonCloudFormationAsyncClient): Future[UpdateStackResult] = {
-    asFuture(client.updateStackAsync)(updateStackRequest)
+  def updateStack(updateStackRequest: UpdateStackRequest, client: CloudFormationAsyncClient): Future[UpdateStackResponse] = {
+    client.updateStack(updateStackRequest).asScala
   }
 
-  def client(profile: String): AmazonCloudFormationAsyncClient = {
-    new AmazonCloudFormationAsyncClient(new ProfileCredentialsProvider(profile))
-  }
-
-  private class AwsAsyncPromiseHandler[R <: AmazonWebServiceRequest, T](promise: Promise[T]) extends AsyncHandler[R, T] {
-    def onError(e: Exception) = {
-      logger.error("AWS call failed", e)
-      promise failure e
-    }
-    def onSuccess(r: R, t: T) = promise success t
-  }
-
-  private def asFuture[R <: AmazonWebServiceRequest, T]
-  (awsClientMethod: Function2[R, AsyncHandler[R, T], java.util.concurrent.Future[T]])
-  : Function1[R, Future[T]] = { awsRequest =>
-
-    val p = Promise[T]()
-    awsClientMethod(awsRequest, new AwsAsyncPromiseHandler(p))
-    p.future
+  def client(profile: String, region: Region): CloudFormationAsyncClient = {
+    CloudFormationAsyncClient.builder()
+      .credentialsProvider(ProfileCredentialsProvider.builder().profileName(profile).build())
+      .region(region)
+      .build()
   }
 }
