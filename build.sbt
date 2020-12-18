@@ -17,3 +17,11 @@ libraryDependencies ++= Seq(
 scalacOptions := Seq("-unchecked", "-deprecation")
 
 assemblyJarName in assembly := "amiup.jar"
+
+assemblyMergeStrategy in assembly := {
+  case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
+  case x if x.endsWith("module-info.class") => MergeStrategy.discard
+  case y =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(y)
+}
