@@ -91,6 +91,7 @@ object AmiUp {
       } action { (region, args) =>
         args.copy(region = Region.of(region))
       } text "AWS region name (defaults to eu-west-1)"
+    help('h', "help").text("Prints this usage text")
     note(
       """
         |Update the AMI parameter of your cloudformation stacks.
