@@ -2,7 +2,7 @@ package com.gu.ami.amiup
 
 import cats.data.EitherT
 import cats.instances.future._
-import com.gu.ami.amiup.aws.{AWS, PollDescribeStackStatus, UpdateCloudFormation}
+import com.gu.ami.amiup.aws.{AWS, AutoScaling, PollDescribeStackStatus, UpdateCloudFormation}
 import com.gu.ami.amiup.util.RichFuture._
 import scopt.OptionParser
 import software.amazon.awssdk.regions.Region
