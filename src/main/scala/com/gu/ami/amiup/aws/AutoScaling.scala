@@ -45,9 +45,11 @@ object AutoScaling extends LazyLogging {
 
   // If the update process fails, any instances already replaced are not rolled back to their previous configuration.
   // Rolling updates can fail due to failed health checks or if instances are on standby or are protected from scale in.
-  def describeInstanceRefresh(client: AutoScalingAsyncClient, asg: AutoScalingGroup): Future[DescribeInstanceRefreshesResponse] = {
+  def describeInstanceRefresh(client: AutoScalingAsyncClient, asg: AutoScalingGroup, instanceRefreshId: String): Future[DescribeInstanceRefreshesResponse] = {
     val request = DescribeInstanceRefreshesRequest.builder()
-      .autoScalingGroupName(asg.autoScalingGroupName).build()
+      .autoScalingGroupName(asg.autoScalingGroupName)
+      .instanceRefreshIds(instanceRefreshId)
+      .build()
     client.describeInstanceRefreshes(request).asScala
   }
 
