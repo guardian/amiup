@@ -11,8 +11,10 @@ import scala.jdk.FutureConverters._
 
 
 object AWS extends LazyLogging {
-  def describeStacks(client: CloudFormationAsyncClient): Future[DescribeStacksResponse] = {
-    val request = DescribeStacksRequest.builder().build()
+  def describeStacks(client: CloudFormationAsyncClient, stackName: Option[String]): Future[DescribeStacksResponse] = {
+    val request = stackName.fold(DescribeStacksRequest.builder().build()) { name =>
+      DescribeStacksRequest.builder().stackName(name).build()
+    }
     client.describeStacks(request).asScala
   }
 

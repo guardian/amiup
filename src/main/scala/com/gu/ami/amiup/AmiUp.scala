@@ -42,7 +42,7 @@ object AmiUp {
         for {
           // find stacks
           matchingStacks <- EitherT.right(
-            UpdateCloudFormation.findStacks(Right(Seq(stackName)), parameterName, cloudFormationClient)
+            UpdateCloudFormation.findStackByName(stackName, cloudFormationClient)
           )
           // validate stacks
           stacks <- EitherT.fromEither[Future](
