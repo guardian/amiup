@@ -15,9 +15,15 @@ object UpdateCloudFormation extends LazyLogging {
     StackStatus.UPDATE_ROLLBACK_COMPLETE
   )
 
+  def findStackByName(stackName: String, client: CloudFormationAsyncClient): Future[Seq[Stack]] = {
+    for {
+      describeStacksResponse <- AWS.describeStacks(client, Some(stackName))
+    } yield describeStacksResponse.stacks.asScala.toSeq
+  }
+
   def findStacks(existingAmiOrStacks: Either[String, Seq[String]], parameterName: String, client: CloudFormationAsyncClient): Future[Seq[Stack]] = {
     for {
-      describeStacksResponse <- AWS.describeStacks(client)
+      describeStacksResponse <- AWS.describeStacks(client, None)
     } yield {
       val allStacks = describeStacksResponse.stacks.asScala.toSeq
       logger.info(s"Found ${allStacks.size} stacks")

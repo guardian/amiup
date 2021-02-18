@@ -45,7 +45,7 @@ object PollDescribeStackStatus extends LazyLogging {
 
   private def getStackStatuses(stacks: Seq[Stack], client: CloudFormationAsyncClient)(implicit ec: ExecutionContext): EitherT[Future, String, Seq[Stack]] = {
     EitherT {
-      AWS.describeStacks(client).map { dsr =>
+      AWS.describeStacks(client, None).map { dsr =>
         logger.debug("Fetched describeStacksResponse")
         Right(dsr.stacks.asScala.toList.filter { stack =>
           stacks.exists(_.stackId == stack.stackId)
