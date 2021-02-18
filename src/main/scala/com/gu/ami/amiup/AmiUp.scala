@@ -14,14 +14,13 @@ import scala.concurrent.duration._
 
 object AmiUp {
   def main(args: Array[String]): Unit = {
-    argParser.parse(args, Arguments.empty()) match {
-      case parsedArgs @ Some(Arguments(newAmi, profile, parameterName, existingAmiOpt, stacksOpt, region)) =>
+    val result: EitherT[Future, String, Unit] = argParser.parse(args, Arguments.empty()) match {
+      case Some(Arguments(Safe, newAmi, profile, parameterName, existingAmiOpt, stackIdsOpt, _, _, region)) =>
         val client = AWS.client(profile, region)
-
-        val result = for {
+        for {
           // find stacks
           matchingStacks <- EitherT.right(
-            UpdateCloudFormation.findStacks(existingAmiOpt.toLeft(stacksOpt.get), parameterName, client)
+            UpdateCloudFormation.findStacks(existingAmiOpt.toLeft(stackIdsOpt.get), parameterName, client)
           )
           // validate stacks
           stacks <- EitherT.fromEither[Future](
@@ -34,26 +33,43 @@ object AmiUp {
           // make update stacks calls
           _ <- EitherT.right(UpdateCloudFormation.updateStacks(stacks, newAmi, parameterName, client))
           // watch the progress for all the stacks
-          finished <- PollDescribeStackStatus.pollUntilComplete(stacks, client)(UI.displayProgress)
-        } yield finished
+          _ <- PollDescribeStackStatus.pollUntilComplete(stacks, client)(UI.displayProgress)
+        } yield Right(())
 
-        // give it 5 minutes to complete (CF is sometimes slow)
-        result.value.awaitAsEither(5.minutes)(_.getMessage).joinRight match {
-          case Right(_) =>
-            UI.complete()
-            System.exit(0)
-          case Left(errMessage) =>
-            UI.error(errMessage)
-            System.exit(1)
-        }
-
-      case None =>
-        // parsing cmd line args failed, help message will have been displayed
+      case Some(Arguments(Yolo, newAmi, profile, parameterName, _, _, Some(stackName), Some(asgName), region)) =>
+        val cloudFormationClient = AWS.client(profile, region)
+        val autoScalingClient = AutoScaling.client(profile, region)
+        for {
+          // find stacks
+          matchingStacks <- EitherT.right(
+            UpdateCloudFormation.findStacks(Right(Seq(stackName)), parameterName, cloudFormationClient)
+          )
+          // validate stacks
+          stacks <- EitherT.fromEither[Future](
+            UpdateCloudFormation.validateStacks(parameterName, matchingStacks)
+          )
+          // make update stacks calls
+          _ <- EitherT.right(UpdateCloudFormation.updateStacks(stacks, newAmi, parameterName, cloudFormationClient))
+          // wait for the stack update to complete
+          _ <- PollDescribeStackStatus.pollUntilComplete(stacks, cloudFormationClient)(UI.displayProgress)
+        } yield Right(())
+      case _ =>
+        EitherT[Future, String, Unit](Future.successful(Right(())))
+      // parsing cmd line args failed, help message will have been displayed
+    }
+    // give it 5 minutes to complete (CF is sometimes slow)
+    result.value.awaitAsEither(5.minutes)(_.getMessage).joinRight match {
+      case Right(_) =>
+        UI.complete()
+        System.exit(0)
+      case Left(errMessage) =>
+        UI.error(errMessage)
         System.exit(1)
     }
   }
 
   val argParser = new OptionParser[Arguments]("amiup") {
+
     opt[String]("new").required()
       .action { (amiId, args) =>
         args.copy(newAmi = amiId)
@@ -77,6 +93,21 @@ object AmiUp {
       } action { (profileName, args) =>
         args.copy(profile = profileName)
       } text "Specify the AWS profile to use for authenticating CloudFormation changes"
+
+    cmd("yolo")
+      .action((_, c) => c.copy(mode = Yolo))
+      .text("TODO")
+      .children(
+        opt[String]("asg").optional()
+          .action { (asg, args) =>
+            args.copy(asgName = Some(asg))
+          } text "The name of the autoscaling group",
+        opt[String]("stack").optional()
+          .action { (stack, args) =>
+            args.copy(stackName = Some(stack))
+          } text "The name of the stack"
+      )
+
     opt[String]("region").optional()
       .validate { region =>
         try {
@@ -103,14 +134,21 @@ object AmiUp {
         |the update on the stack(s) you specify.
       """.stripMargin)
     checkConfig { args =>
-      (args.existingAmi.isEmpty, args.stackIds.isEmpty) match {
-        case (true, true) =>
-          failure("You must provide stacks to update, or an existing AMI to search for")
-        case (false, false) =>
-          failure("You must provide either stacks to update, or an existing AMI to search for (not both)")
-        case _ =>
-          success
+      if (args.mode == Safe) {
+        (args.existingAmi.isEmpty, args.stackIds.isEmpty) match {
+          case (true, true) =>
+            failure("You must provide stacks to update, or an existing AMI to search for")
+          case (false, false) =>
+            failure("You must provide either stacks to update, or an existing AMI to search for (not both)")
+          case _ =>
+            success
+        }
+      } else if (args.stackName.isEmpty || args.asgName.isEmpty) {
+        failure("You must provide both the stack name and ASG name")
+      } else {
+        success
       }
+
     }
   }
 }
