@@ -1,15 +1,18 @@
 package com.gu.ami.amiup.aws
 
 
+import cats.data.EitherT
+import com.gu.ami.amiup.util.RichFuture
 import com.typesafe.scalalogging.LazyLogging
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.autoscaling.AutoScalingAsyncClient
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 import software.amazon.awssdk.services.autoscaling.model._
 
-import scala.concurrent.Future
-import scala.jdk.FutureConverters._
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
+import scala.jdk.FutureConverters._
 
 object AutoScaling extends LazyLogging {
 
@@ -51,6 +54,28 @@ object AutoScaling extends LazyLogging {
       .instanceRefreshIds(instanceRefreshId)
       .build()
     client.describeInstanceRefreshes(request).asScala
+  }
+
+  def pollUntilComplete(client: AutoScalingAsyncClient, asg: AutoScalingGroup, instanceRefreshId: String)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
+    val interval = 5.seconds
+
+    def loop(instanceRefreshes: Seq[InstanceRefresh]): EitherT[Future, String, Unit] = {
+      if (instanceRefreshes.nonEmpty && instanceRefreshes.forall(isFinished)) {
+        // stop looping when we're finished
+        EitherT.pure(())
+      } else {
+        // poll again, after a delay
+        for {
+          // delay next execution
+          _ <- EitherT.right(RichFuture.delay(interval))
+          // call describe instance refresh to get current status
+          refreshResponse <- EitherT.right(describeInstanceRefresh(client, asg, instanceRefreshId))
+          refreshes = refreshResponse.instanceRefreshes.asScala.toSeq
+          next <- loop(refreshes)
+        } yield next
+      }
+    }
+    loop(Seq.empty)
   }
 
   private[aws] def isFinished(refresh: InstanceRefresh): Boolean = {

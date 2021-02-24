@@ -59,9 +59,7 @@ object AmiUp {
           )
           // begin rolling update of instances in the ASG
           response <- EitherT.right(AutoScaling.startInstanceRefresh(autoScalingClient, matchingAsg))
-          _ <- EitherT.right(
-            AutoScaling.describeInstanceRefresh(autoScalingClient, matchingAsg , response.instanceRefreshId)
-          )
+          _ <- AutoScaling.pollUntilComplete(autoScalingClient, matchingAsg, response.instanceRefreshId)
         } yield Right(())
       case _ =>
         EitherT[Future, String, Unit](Future.successful(Right(())))
