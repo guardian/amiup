@@ -52,6 +52,16 @@ object AmiUp {
           _ <- EitherT.right(UpdateCloudFormation.updateStacks(stacks, newAmi, parameterName, cloudFormationClient))
           // wait for the stack update to complete
           _ <- PollDescribeStackStatus.pollUntilComplete(stacks, cloudFormationClient)(UI.displayProgress)
+          // ensure the ASG exists
+          allAsgs <- EitherT.right(AutoScaling.describeAutoScalingGroup(autoScalingClient, asgName))
+          matchingAsg <- EitherT.fromEither[Future](
+            AutoScaling.parseAutoScalingGroups(asgName, allAsgs)
+          )
+          // begin rolling update of instances in the ASG
+          response <- EitherT.right(AutoScaling.startInstanceRefresh(autoScalingClient, matchingAsg))
+          _ <- EitherT.right(
+            AutoScaling.describeInstanceRefresh(autoScalingClient, matchingAsg , response.instanceRefreshId)
+          )
         } yield Right(())
       case _ =>
         EitherT[Future, String, Unit](Future.successful(Right(())))
