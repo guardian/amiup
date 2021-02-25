@@ -30,6 +30,18 @@ argument. Once it has kicked off the CloudFormation update it will
 poll stacks until the update completes, letting you know the current
 status of each stack.
 
+### YOLO Mode
+
+The `yolo` mode of `amiup` will start an instance refresh on the
+autoscaling group once the CloudFormation template has been updated.
+Instances will be replaced with a rolling update; running instances
+will be terminated before new ones launch.
+
+Rolling updates can fail due to failed health checks or if instances
+are on standby or are protected from scale in. If the update process
+fails, any instances already replaced will not be rolled back to their
+previous configuration.
+
 ## Development / alternate usage
 
 You can also check out the project and run it directly using
