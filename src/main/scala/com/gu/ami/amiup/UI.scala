@@ -6,12 +6,16 @@ import software.amazon.awssdk.services.cloudformation.model.Stack
 
 
 object UI extends LazyLogging {
-  def complete() = {
+  def safeComplete(): Unit = {
     println("Update complete".colour(Console.GREEN))
     println("You should now deploy each stack to start machines with the new AMI")
   }
 
-  def error(message: String) = {
+  def yoloComplete(): Unit = {
+    println("Update complete".colour(Console.GREEN))
+  }
+
+  def error(message: String): Unit = {
     println("Aborting due to error".colour(Console.YELLOW))
     println(message.colour(Console.RED))
   }
@@ -49,12 +53,6 @@ object UI extends LazyLogging {
     println("-----------------------".colour(Console.RESET))
   }
 
-  def formatStatus(status: Option[InstanceRefreshStatus], statusReason: Option[String]): String = {
-    statusReason.fold(status.getOrElse("Unknown status").toString){ reason =>
-      s"${status.getOrElse("Unknown status").toString} - $reason"
-    }
-  }
-
   def displayRefreshProgress(refreshes: Seq[InstanceRefreshProgress]): Unit = {
     refreshes.foreach {
       case InstanceRefreshProgress(asgName, true, true, _, _, _) =>
@@ -63,12 +61,16 @@ object UI extends LazyLogging {
       case InstanceRefreshProgress(asgName, false, _, _, _, _) =>
         println(s"$asgName: Starting instance refresh...".colour(Console.BLUE))
       case InstanceRefreshProgress(asgName, true, false, true, status, statusReason) =>
-        println(s"$asgName: ${formatStatus(status, statusReason)}".colour(Console.GREEN))
+        println(s"$asgName: ${parseStatus(status, statusReason)}".colour(Console.GREEN))
       case InstanceRefreshProgress(asgName, true, false, _, status, statusReason) =>
-        println(s"$asgName: ${formatStatus(status, statusReason)}".colour(Console.CYAN))
-      case InstanceRefreshProgress(asgName, _, _, _, _, _) =>
-        logger.error(s"Instance refresh for $asgName has entered an invalid state")
-        println(s"$asgName: Instance refresh has entered an unexpected state".colour(Console.CYAN))
+        println(s"$asgName: ${parseStatus(status, statusReason)}".colour(Console.CYAN))
+    }
+    println("-----------------------".colour(Console.RESET))
+  }
+
+  private def parseStatus(status: Option[InstanceRefreshStatus], statusReason: Option[String]): String = {
+    statusReason.fold(status.getOrElse("Unknown status").toString){ reason =>
+      s"${status.getOrElse("Unknown status").toString} - $reason"
     }
   }
 

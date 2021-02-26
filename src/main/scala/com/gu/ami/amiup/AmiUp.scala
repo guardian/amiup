@@ -34,7 +34,9 @@ object AmiUp {
           _ <- EitherT.right(UpdateCloudFormation.updateStacks(stacks, newAmi, parameterName, client))
           // watch the progress for all the stacks
           _ <- PollDescribeStackStatus.pollUntilComplete(stacks, client)(UI.displayProgress)
-        } yield Right(())
+        } yield Right {
+          UI.safeComplete()
+        }
 
       case Some(Arguments(Yolo, newAmi, profile, parameterName, _, _, Some(stackName), Some(asgName), region)) =>
         val cloudFormationClient = AWS.client(profile, region)
@@ -60,15 +62,15 @@ object AmiUp {
           // begin rolling update of instances in the ASG
           response <- EitherT.right(AutoScaling.startInstanceRefresh(autoScalingClient, matchingAsg))
           _ <- AutoScaling.pollRefreshProgress(autoScalingClient, matchingAsg, response.instanceRefreshId)(UI.displayRefreshProgress)
-        } yield Right(())
+        } yield Right {
+          UI.yoloComplete()
+        }
       case _ =>
         EitherT[Future, String, Unit](Future.successful(Right(())))
       // parsing cmd line args failed, help message will have been displayed
     }
-    // give it 5 minutes to complete (CF is sometimes slow)
-    result.value.awaitAsEither(5.minutes)(_.getMessage).joinRight match {
+    result.value.awaitAsEither(Duration.Inf)(_.getMessage).joinRight match {
       case Right(_) =>
-        UI.complete()
         System.exit(0)
       case Left(errMessage) =>
         UI.error(errMessage)
