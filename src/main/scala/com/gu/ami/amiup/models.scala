@@ -1,6 +1,7 @@
 package com.gu.ami.amiup
 
 import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.autoscaling.model.InstanceRefreshStatus
 import software.amazon.awssdk.services.cloudformation.model.Stack
 
 
@@ -30,4 +31,13 @@ case class StackProgress(
   started: Boolean,
   finished: Boolean,
   failed: Boolean
+)
+
+case class InstanceRefreshProgress(
+  asgName: String,
+  started: Boolean,
+  failed: Boolean,
+  finished: Boolean,
+  status: Option[InstanceRefreshStatus],
+  statusReason: Option[String],
 )

@@ -1,7 +1,8 @@
 package com.gu.ami.amiup
 
-import software.amazon.awssdk.services.cloudformation.model.Stack
 import com.typesafe.scalalogging.LazyLogging
+import software.amazon.awssdk.services.autoscaling.model.InstanceRefreshStatus
+import software.amazon.awssdk.services.cloudformation.model.Stack
 
 
 object UI extends LazyLogging {
@@ -46,6 +47,29 @@ object UI extends LazyLogging {
         println(s"${stack.stackName}: ${stack.stackStatus}".colour(Console.CYAN))
     }
     println("-----------------------".colour(Console.RESET))
+  }
+
+  def formatStatus(status: Option[InstanceRefreshStatus], statusReason: Option[String]): String = {
+    statusReason.fold(status.getOrElse("Unknown status").toString){ reason =>
+      s"${status.getOrElse("Unknown status").toString} - $reason"
+    }
+  }
+
+  def displayRefreshProgress(refreshes: Seq[InstanceRefreshProgress]): Unit = {
+    refreshes.foreach {
+      case InstanceRefreshProgress(asgName, true, true, _, _, _) =>
+        // Instance refresh has been cancelled or has failed
+        println(s"$asgName: Instance refresh was not successful".colour(Console.RED))
+      case InstanceRefreshProgress(asgName, false, _, _, _, _) =>
+        println(s"$asgName: Starting instance refresh...".colour(Console.BLUE))
+      case InstanceRefreshProgress(asgName, true, false, true, status, statusReason) =>
+        println(s"$asgName: ${formatStatus(status, statusReason)}".colour(Console.GREEN))
+      case InstanceRefreshProgress(asgName, true, false, _, status, statusReason) =>
+        println(s"$asgName: ${formatStatus(status, statusReason)}".colour(Console.CYAN))
+      case InstanceRefreshProgress(asgName, _, _, _, _, _) =>
+        logger.error(s"Instance refresh for $asgName has entered an invalid state")
+        println(s"$asgName: Instance refresh has entered an unexpected state".colour(Console.CYAN))
+    }
   }
 
   implicit class RichString(val s: String) extends AnyVal {
