@@ -2,6 +2,7 @@ package com.gu.ami.amiup.aws
 
 
 import cats.data.EitherT
+import com.gu.ami.amiup.InstanceRefreshProgress
 import com.gu.ami.amiup.util.RichFuture
 import com.typesafe.scalalogging.LazyLogging
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
@@ -56,33 +57,48 @@ object AutoScaling extends LazyLogging {
     client.describeInstanceRefreshes(request).asScala
   }
 
-  def pollUntilComplete(client: AutoScalingAsyncClient, asg: AutoScalingGroup, instanceRefreshId: String)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
-    val interval = 5.seconds
+  def pollRefreshProgress(client: AutoScalingAsyncClient, asg: AutoScalingGroup, instanceRefreshId: String)(onNext: Seq[InstanceRefreshProgress] => Unit)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
 
-    def loop(instanceRefreshes: Seq[InstanceRefresh]): EitherT[Future, String, Unit] = {
-      if (instanceRefreshes.nonEmpty && instanceRefreshes.forall(isFinished)) {
+    def loop(instanceRefreshes: Seq[InstanceRefreshProgress]): EitherT[Future, String, Unit] = {
+      onNext(instanceRefreshes)
+      if (instanceRefreshes.forall(_.finished)) {
         // stop looping when we're finished
+        logger.debug("Polling complete, instance refresh has finished")
         EitherT.pure(())
       } else {
         // poll again, after a delay
+        logger.debug("Polling not yet complete, will repeat lookup after delay")
         for {
           // delay next execution
-          _ <- EitherT.right(RichFuture.delay(interval))
+          _ <- EitherT.right(RichFuture.delay(10.seconds))
           // call describe instance refresh to get current status
           refreshResponse <- EitherT.right(describeInstanceRefresh(client, asg, instanceRefreshId))
           refreshes = refreshResponse.instanceRefreshes.asScala.toSeq
-          next <- loop(refreshes)
+          progress = refreshes.map(getProgress)
+          next <- loop(progress)
         } yield next
       }
     }
-    loop(Seq.empty)
+    val initial = InstanceRefreshProgress(asg.autoScalingGroupName, false, false, false, None, None)
+    loop(Seq(initial))
   }
 
-  private[aws] def isFinished(refresh: InstanceRefresh): Boolean = {
+  private[aws] def getProgress(refresh: InstanceRefresh): InstanceRefreshProgress = {
+    InstanceRefreshProgress(
+      refresh.autoScalingGroupName,
+      hasStarted(refresh),
+      hasFailed(refresh),
+      hasFinished(refresh),
+      Option(refresh.status),
+      Option(refresh.statusReason)
+    )
+  }
+
+  private[aws] def hasStarted(refresh: InstanceRefresh): Boolean = {
     refresh.status match {
       case InstanceRefreshStatus.PENDING => false
-      case InstanceRefreshStatus.IN_PROGRESS => false
-      case InstanceRefreshStatus.CANCELLING => false
+      case InstanceRefreshStatus.IN_PROGRESS => true
+      case InstanceRefreshStatus.CANCELLING => true
       case InstanceRefreshStatus.SUCCESSFUL => true
       case InstanceRefreshStatus.FAILED => true
       case InstanceRefreshStatus.CANCELLED => true
@@ -90,4 +106,20 @@ object AutoScaling extends LazyLogging {
     }
   }
 
+  private[aws] def hasFinished(refresh: InstanceRefresh): Boolean = {
+    refresh.status match {
+      case InstanceRefreshStatus.SUCCESSFUL => true
+      case InstanceRefreshStatus.FAILED => true
+      case InstanceRefreshStatus.CANCELLED => true
+      case _ => false
+    }
+  }
+
+  private[aws] def hasFailed(refresh: InstanceRefresh): Boolean = {
+    refresh.status match {
+      case InstanceRefreshStatus.FAILED => true
+      case InstanceRefreshStatus.CANCELLED => true
+      case _ => false
+    }
+  }
 }
