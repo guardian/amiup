@@ -66,7 +66,10 @@ object UpdateCloudFormation extends LazyLogging {
             .parameterValue(newAmi)
             .build()
         case parameter =>
-          parameter
+          Parameter.builder()
+            .parameterKey(parameter.parameterKey)
+            .usePreviousValue(true)
+            .build()
       }.asJava)
       .build()
 
