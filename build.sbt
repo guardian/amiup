@@ -22,6 +22,8 @@ assemblyJarName in assembly := "amiup.jar"
 assemblyMergeStrategy in assembly := {
   case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
   case x if x.endsWith("module-info.class") => MergeStrategy.discard
+  case PathList(ps@_*) if Set("customization.config" , "examples-1.json" , "paginators-1.json", "service-2.json" , "waiters-2.json").contains(ps.last) =>
+    MergeStrategy.discard
   case y =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(y)
