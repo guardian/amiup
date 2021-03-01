@@ -42,6 +42,13 @@ are on standby or are protected from scale in. If the update process
 fails, any instances already replaced will not be rolled back to their
 previous configuration.
 
+To run `amiup` in `yolo` mode the ASG name, stack name and new AMI are
+required arguments:
+
+```bash
+java -jar amiup.jar yolo --asg <asg name> --stack <stack name> --new ami-567890 --profile <AWS profile> [--region <aws region name>]
+```
+
 ## Development / alternate usage
 
 You can also check out the project and run it directly using

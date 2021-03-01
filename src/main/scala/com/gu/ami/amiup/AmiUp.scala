@@ -106,7 +106,7 @@ object AmiUp {
 
     cmd("yolo")
       .action((_, c) => c.copy(mode = Yolo))
-      .text("TODO")
+      .text("Run instance refresh on an autoscaling group once the CloudFormation stack is updated")
       .children(
         opt[String]("asg").optional()
           .action { (asg, args) =>
