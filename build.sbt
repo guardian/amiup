@@ -2,17 +2,17 @@ name := """amiup"""
 
 version := "1.0"
 
-scalaVersion := "2.13.4"
+scalaVersion := "2.13.10"
 
 // Change this to another test framework if you prefer
 libraryDependencies ++= Seq(
-  "software.amazon.awssdk" % "cloudformation" % "2.15.47",
-  "software.amazon.awssdk" % "autoscaling" % "2.15.47",
-  "com.github.scopt" %% "scopt" % "4.0.0",
-  "org.typelevel" %% "cats-core" % "2.3.0",
-  "ch.qos.logback" %  "logback-classic" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-  "org.scalatest" %% "scalatest" % "3.2.2" % Test
+  "software.amazon.awssdk" % "cloudformation" % "2.20.26",
+  "software.amazon.awssdk" % "autoscaling" % "2.20.26",
+  "com.github.scopt" %% "scopt" % "4.1.0",
+  "org.typelevel" %% "cats-core" % "2.9.0",
+  "ch.qos.logback" %  "logback-classic" % "1.4.6",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
+  "org.scalatest" %% "scalatest" % "3.2.15" % Test
 )
 
 scalacOptions := Seq("-unchecked", "-deprecation")
