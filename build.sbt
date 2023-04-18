@@ -2,7 +2,7 @@ name := """amiup"""
 
 version := "1.0"
 
-scalaVersion := "2.13.4"
+scalaVersion := "2.13.10"
 
 // Change this to another test framework if you prefer
 libraryDependencies ++= Seq(
