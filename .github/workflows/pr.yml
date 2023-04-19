@@ -27,5 +27,5 @@ jobs:
           cache: 'sbt'
 
       - name: Run tests
-        run: sbt clean compile test
+        run: ./script/test
 
