@@ -10,7 +10,7 @@ libraryDependencies ++= Seq(
   "software.amazon.awssdk" % "autoscaling" % "2.20.26",
   "com.github.scopt" %% "scopt" % "4.1.0",
   "org.typelevel" %% "cats-core" % "2.9.0",
-  "ch.qos.logback" %  "logback-classic" % "1.2.3",
+  "ch.qos.logback" %  "logback-classic" % "1.2.12",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
   "org.scalatest" %% "scalatest" % "3.2.15" % Test
 )
