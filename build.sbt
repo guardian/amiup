@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-core" % "2.9.0",
   "ch.qos.logback" %  "logback-classic" % "1.4.7",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
-  "org.scalatest" %% "scalatest" % "3.2.15" % Test
+  "org.scalatest" %% "scalatest" % "3.2.16" % Test
 )
 
 scalacOptions := Seq("-unchecked", "-deprecation")
