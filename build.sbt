@@ -6,7 +6,7 @@ scalaVersion := "2.13.10"
 
 // Change this to another test framework if you prefer
 libraryDependencies ++= Seq(
-  "software.amazon.awssdk" % "cloudformation" % "2.20.70",
+  "software.amazon.awssdk" % "cloudformation" % "2.20.71",
   "software.amazon.awssdk" % "autoscaling" % "2.20.71",
   "com.github.scopt" %% "scopt" % "4.1.0",
   "org.typelevel" %% "cats-core" % "2.9.0",
