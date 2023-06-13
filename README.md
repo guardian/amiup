@@ -1,3 +1,7 @@
+> **Note**
+> This repository is now archieved in favour of [using Riff-Raff to update AMIs in CloudFormation templates](https://riffraff.gutools.co.uk/docs/magenta-lib/types#amicloudformationparameter).
+> If you've got questions on how to do this, please contact the DevX Operations team.
+
 AMIUP
 =====
 
